@@ -245,7 +245,6 @@
 </div>
 
 <script>
-    // Показываем/скрываем поле типа кухни
     document.getElementById('roomType').addEventListener('change', function() {
         const kitchenTypeDiv = document.getElementById('kitchenTypeDiv');
         const kitchenTypeSelect = document.getElementById('kitchenType');
@@ -259,7 +258,6 @@
         }
     });
 
-    // Инициализация при загрузке
     document.addEventListener('DOMContentLoaded', function() {
         const roomType = document.getElementById('roomType');
         const kitchenTypeDiv = document.getElementById('kitchenTypeDiv');
@@ -270,7 +268,6 @@
             kitchenTypeSelect.setAttribute('required', 'required');
         }
 
-        // Добавляем aria-label для улучшения доступности
         document.querySelectorAll('input[placeholder]').forEach(input => {
             if (!input.getAttribute('aria-label')) {
                 input.setAttribute('aria-label', input.getAttribute('placeholder'));
