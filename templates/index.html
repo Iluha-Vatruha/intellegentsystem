@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Расчет параметров вентиляции</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body {
+            background-color: #f8f9fa;
+            padding-top: 20px;
+        }
+        .container {
+            max-width: 1200px;
+        }
+        .card {
+            margin-bottom: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .calculation-card {
+            border-left: 4px solid #007bff;
+        }
+        .recommendation-card {
+            border-left: 4px solid #28a745;
+        }
+        .error-card {
+            border-left: 4px solid #dc3545;
+        }
+        .result-value {
+            font-size: 1.2em;
+            font-weight: bold;
+            color: #007bff;
+        }
+        pre {
+            background-color: #212529;
+            color: #f8f9fa;
+            padding: 15px;
+            border-radius: 5px;
+            max-height: 400px;
+            overflow-y: auto;
+            font-size: 0.9em;
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <h1 class="mb-4 text-center">Экспертная система расчета вентиляции</h1>
+    <form method="POST" class="card p-4">
+        <h4 class="mb-3">Параметры помещения</h4>
+
+        <div class="row mb-3">
+            <div class="col-md-6">
+                <label for="roomType" class="form-label fw-bold">Тип помещения</label>
+                <select name="тип_помещения" class="form-select" id="roomType" required aria-label="Выберите тип помещения">
+                    <option value="жилая_площадь">Жилая комната</option>
+                    <option value="спальня">Спальня</option>
+                    <option value="гостиная">Гостиная</option>
+                    <option value="кухня">Кухня</option>
+                    <option value="ванная">Ванная комната</option>
+                    <option value="туалет">Туалет</option>
+                    <option value="котельная">Котельная</option>
+                    <option value="бойлерная">Бойлерная</option>
+                    <option value="офис">Офис</option>
+                </select>
+                <div class="form-text">
+                    <small>Кратность обновления воздуха устанавливается автоматически</small>
+                </div>
+            </div>
+            <div class="col-md-6" id="kitchenTypeDiv" style="display: none;">
+                <label for="kitchenType" class="form-label fw-bold">Тип кухни</label>
+                <select name="тип_кухни" class="form-select" id="kitchenType" aria-label="Выберите тип кухни">
+                    <option value="электрическая">Электрическая плита (кратность: 3)</option>
+                    <option value="газовая">Газовая плита (кратность: 7)</option>
+                </select>
+                <div class="form-text">
+                    <small>Газовая плита требует более интенсивной вентиляции</small>
+                </div>
+            </div>
+        </div>
+
+        <div class="row mb-3">
+            <div class="col-md-6">
+                <label for="area" class="form-label fw-bold">Площадь помещения (м²)</label>
+                <input id="area" name="площадь" type="number" step="0.1" min="1" max="500"
+                       class="form-control" value="{{ form_data.get('площадь', '20') }}"
+                       required aria-label="Площадь помещения в квадратных метрах"
+                       placeholder="Введите площадь">
+                <div class="form-text">
+                    <small>Введите площадь помещения от 5 до 500 м²</small>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <label for="height" class="form-label fw-bold">Высота потолков (м)</label>
+                <input id="height" name="высота_потолков" type="number" step="0.1" min="2" max="10"
+                       class="form-control" value="{{ form_data.get('высота_потолков', '2.7') }}"
+                       required aria-label="Высота потолков в метрах"
+                       placeholder="Введите высоту потолков">
+                <div class="form-text">
+                    <small>Стандартная высота: 2.5-3.0 м</small>
+                </div>
+            </div>
+        </div>
+
+        <h5 class="mb-3 mt-4">Существующее оборудование (опционально)</h5>
+        <p class="text-muted">Если у вас уже есть оборудование, укажите его параметры для проверки</p>
+
+        <div class="row mb-3">
+            <div class="col-md-4">
+                <label for="supplyName" class="form-label">Приточный элемент</label>
+                <input id="supplyName" name="приточный_элемент" type="text" class="form-control"
+                       placeholder="Например: Клапан КИВ-125" aria-label="Название приточного элемента">
+            </div>
+            <div class="col-md-4">
+                <label for="supplyPerformance" class="form-label">Производительность (м³/ч)</label>
+                <input id="supplyPerformance" name="производительность_приток" type="number" class="form-control"
+                       placeholder="350" aria-label="Производительность приточного элемента">
+            </div>
+            <div class="col-md-4">
+                <label for="supplyDiameter" class="form-label">Диаметр (мм)</label>
+                <input id="supplyDiameter" name="диаметр_приток" type="number" class="form-control"
+                       placeholder="125" aria-label="Диаметр приточного элемента">
+            </div>
+        </div>
+
+        <div class="row mb-4">
+            <div class="col-md-4">
+                <label for="exhaustName" class="form-label">Вытяжной элемент</label>
+                <input id="exhaustName" name="вытяжной_элемент" type="text" class="form-control"
+                       placeholder="Например: Вентилятор ВЕНТС" aria-label="Название вытяжного элемента">
+            </div>
+            <div class="col-md-4">
+                <label for="exhaustPerformance" class="form-label">Производительность (м³/ч)</label>
+                <input id="exhaustPerformance" name="производительность_вытяжка" type="number" class="form-control"
+                       placeholder="600" aria-label="Производительность вытяжного элемента">
+            </div>
+            <div class="col-md-4">
+                <label for="exhaustDiameter" class="form-label">Диаметр (мм)</label>
+                <input id="exhaustDiameter" name="диаметр_вытяжка" type="number" class="form-control"
+                       placeholder="150" aria-label="Диаметр вытяжного элемента">
+            </div>
+        </div>
+
+        <button type="submit" class="btn btn-primary btn-lg w-100" aria-label="Рассчитать параметры вентиляции">
+            Рассчитать параметры вентиляции
+        </button>
+    </form>
+
+    {% if calculations %}
+    <div class="card p-4 calculation-card">
+        <h4 class="mb-3">Результаты расчета</h4>
+        <div class="row">
+            <div class="col-md-12">
+                <div class="card mb-3">
+                    <div class="card-body">
+                        <h5 class="card-title" id="calculationResults">Рассчитанные параметры вентиляции</h5>
+                        <div class="row" role="list" aria-labelledby="calculationResults">
+                            {% for calc in calculations %}
+                            <div class="col-md-3 mb-3" role="listitem">
+                                <div class="card h-100">
+                                    <div class="card-body text-center">
+                                        <h6 class="card-subtitle mb-2 text-muted">Объем помещения</h6>
+                                        <p class="result-value">{{ calc.объем_воздуха }} м³</p>
+                                        <p class="card-text"><small>Объем воздуха для вентиляции</small></p>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-3 mb-3" role="listitem">
+                                <div class="card h-100">
+                                    <div class="card-body text-center">
+                                        <h6 class="card-subtitle mb-2 text-muted">Приток воздуха</h6>
+                                        <p class="result-value">{{ calc.рекомендуемая_производительность_притока }} м³/ч</p>
+                                        <p class="card-text"><small>Требуемая производительность притока</small></p>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-3 mb-3" role="listitem">
+                                <div class="card h-100">
+                                    <div class="card-body text-center">
+                                        <h6 class="card-subtitle mb-2 text-muted">Вытяжка воздуха</h6>
+                                        <p class="result-value">{{ calc.рекомендуемая_производительность_вытяжки }} м³/ч</p>
+                                        <p class="card-text"><small>Требуемая производительность вытяжки</small></p>
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="col-md-3 mb-3" role="listitem">
+                                <div class="card h-100">
+                                    <div class="card-body text-center">
+                                        <h6 class="card-subtitle mb-2 text-muted">Диаметр воздуховода</h6>
+                                        <p class="result-value">{{ calc.рекомендуемый_диаметр }} мм</p>
+                                        <p class="card-text"><small>Рекомендуемый диаметр</small></p>
+                                    </div>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    {% if recommendations %}
+    <div class="card p-4 recommendation-card">
+        <h4 class="mb-3">Рекомендации по оборудованию</h4>
+        <div class="row">
+            {% for rec in recommendations %}
+            <div class="col-md-6 mb-3">
+                <div class="card h-100">
+                    <div class="card-body">
+                        <p class="card-text"><small class="text-muted">{{ rec.explanation }}</small></p>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+
+    {% if errors %}
+    <div class="card p-4 error-card">
+        <h4 class="mb-3">Ошибки и предупреждения</h4>
+        {% for error in errors %}
+        <div class="alert {% if error.код.startswith('WARN') %}alert-warning{% else %}alert-danger{% endif %}"
+             role="alert" aria-live="polite">
+            <div class="d-flex justify-content-between align-items-start">
+                <div>
+                    <strong>{{ error.код }}:</strong> {{ error.описание }}
+                </div>
+                <span class="badge {% if error.код.startswith('WARN') %}bg-warning text-dark{% else %}bg-danger{% endif %}">
+                    {% if error.код.startswith('WARN') %}Предупреждение{% else %}Ошибка{% endif %}
+                </span>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    {% if trace %}
+    <div class="card p-4">
+        <h4 class="mb-3">Трассировка выполнения правил</h4>
+        <pre>{{ trace }}</pre>
+    </div>
+    {% endif %}
+</div>
+
+<script>
+    // Показываем/скрываем поле типа кухни
+    document.getElementById('roomType').addEventListener('change', function() {
+        const kitchenTypeDiv = document.getElementById('kitchenTypeDiv');
+        const kitchenTypeSelect = document.getElementById('kitchenType');
+
+        if (this.value === 'кухня') {
+            kitchenTypeDiv.style.display = 'block';
+            kitchenTypeSelect.setAttribute('required', 'required');
+        } else {
+            kitchenTypeDiv.style.display = 'none';
+            kitchenTypeSelect.removeAttribute('required');
+        }
+    });
+
+    // Инициализация при загрузке
+    document.addEventListener('DOMContentLoaded', function() {
+        const roomType = document.getElementById('roomType');
+        const kitchenTypeDiv = document.getElementById('kitchenTypeDiv');
+        const kitchenTypeSelect = document.getElementById('kitchenType');
+
+        if (roomType.value === 'кухня') {
+            kitchenTypeDiv.style.display = 'block';
+            kitchenTypeSelect.setAttribute('required', 'required');
+        }
+
+        // Добавляем aria-label для улучшения доступности
+        document.querySelectorAll('input[placeholder]').forEach(input => {
+            if (!input.getAttribute('aria-label')) {
+                input.setAttribute('aria-label', input.getAttribute('placeholder'));
+            }
+        });
+    });
+</script>
+</body>
+</html>
